@@ -1,0 +1,367 @@
+Requirements (high level)
+Functional requirements
+
+User management
+
+User registration, login, password reset, profile management.
+
+Roles: user, admin (and optionally viewer/editor).
+
+Document lifecycle
+
+Upload documents (single & bulk).
+
+Download documents.
+
+View (preview) documents in-browser (PDF, images, plain text, Office files via preview or conversion).
+
+Delete (soft delete + permanent delete).
+
+Move documents between categories.
+
+Rename, add description, set version comments.
+
+Organization
+
+Category / folder hierarchy (nested folders).
+
+Tags and automatic categorization (rules / ML assisted suggestions).
+
+Star / favorites and custom collections.
+
+Search & discovery
+
+Full-text search (filename, tags, description, OCRed content).
+
+Filter by category, file type, date range, tags, owner, size.
+
+Sort by relevance, date, name.
+
+Metadata & versioning
+
+Store metadata (uploaded by, date, size, file type, checksum).
+
+Document versioning with ability to view/roll back previous versions.
+
+Sharing & permissions
+
+Share with users or groups (view / comment / edit).
+
+Temporary share links (expiring, optional password).
+
+Audit trail of access and changes.
+
+Security & compliance
+
+Authentication (email/password + optional 2FA).
+
+Authorization (role-based).
+
+Encryption at rest and in transit.
+
+Audit logs.
+
+Optionally support retention policies and secure deletion.
+
+Integrations & automation
+
+Import from Google Drive / Dropbox / OneDrive (optional).
+
+Export bulk (zip).
+
+Automated OCR for images/scan PDFs.
+
+Background jobs for virus scanning, thumbnail generation, indexing.
+
+Admin & monitoring
+
+Admin dashboard: usage stats, storage usage, user management, logs.
+
+Alerts for storage near limits, failed jobs.
+
+Non-functional requirements
+
+Scalable: handle many files, concurrent users.
+
+Reliable: retries for background jobs, safe uploads.
+
+Performant: quick uploads, fast search results.
+
+Secure: SOC/ISO friendly practices; GDPR-ready features (data export/delete).
+
+Maintainable & testable: clean APIs, automated tests, CI/CD.
+
+Cost-aware: efficient file storage and egress controls.
+
+Minimum Viable Product (MVP)
+
+Focus on essentials to get a working product:
+
+User auth (signup/login).
+
+Upload, download, preview (PDF/images), rename, delete (soft).
+
+Basic folder/categories and tags.
+
+Simple search by filename + tags.
+
+Role-based basic sharing (link sharing).
+
+Storage (cloud like S3 or self-hosted).
+
+Admin panel showing users & storage usage.
+
+Stretch / Future features
+
+OCR & full-text indexing.
+
+ML-based automatic category suggestion.
+
+Team/group permissions and workflows.
+
+Office document preview via conversion service.
+
+Integrations with external storage & email.
+
+Content classification (PII detection).
+
+Mobile app / PWA + offline sync.
+
+Suggested tech stack (examples)
+
+Frontend: React (TypeScript) with component library (Tailwind / Material / shadcn).
+
+Backend: Node.js + Express / Fastify (TypeScript) OR Python (FastAPI) OR Java Spring Boot.
+
+Auth: JWT for API, session or cookie for web; integrate with OAuth providers.
+
+Database: PostgreSQL (metadata, users, ACLs). Redis for job queue/cache.
+
+File storage: Amazon S3 (or MinIO for on-prem). Use pre-signed uploads.
+
+Search: Elasticsearch, OpenSearch, or Postgres full-text if small scale.
+
+Background processing: BullMQ (Node) / Celery (Python).
+
+OCR: Tesseract (open source) or a cloud OCR API.
+
+Hosting / infra: Kubernetes or managed services (ECS/EKS), or Heroku/Vercel for small scale.
+
+CI/CD: GitHub Actions / GitLab CI.
+
+Monitoring: Prometheus + Grafana, Sentry for errors.
+
+Containerization: Docker.
+
+Data model (simplified)
+
+User: id, name, email, password_hash, role, created_at
+
+Document: id, owner_id, name, description, mime_type, size, storage_key, checksum, created_at, updated_at, current_version_id, is_deleted (soft)
+
+DocumentVersion: id, document_id, version_number, storage_key, size, created_at, comment
+
+Folder: id, owner_id, name, parent_id, created_at
+
+Tag: id, name
+
+DocumentTag: document_id, tag_id
+
+Share: id, document_id, shared_with_user_id/null, public_link_token/null, expires_at, permissions
+
+AuditLog: id, user_id, action, document_id, timestamp, details
+
+API endpoints (representative)
+
+Auth: POST /api/auth/register, POST /api/auth/login, POST /api/auth/refresh, POST /api/auth/forgot-password
+
+Users: GET /api/users/:id, PUT /api/users/:id
+
+Documents:
+
+POST /api/documents (create metadata, return presigned upload URL)
+
+PUT /api/documents/:id/complete (after upload)
+
+GET /api/documents/:id (metadata)
+
+GET /api/documents/:id/download (presigned download)
+
+GET /api/documents/:id/preview (stream or link)
+
+DELETE /api/documents/:id (soft delete)
+
+POST /api/documents/:id/restore
+
+GET /api/documents/:id/versions
+
+POST /api/documents/:id/share
+
+Folders/Categories: GET/POST/PUT/DELETE /api/folders
+
+Search: GET /api/search?q=...&filters=...
+
+Admin: GET /api/admin/stats, GET /api/admin/logs
+
+UI / UX guidance
+
+Dashboard: recent docs, quick upload, recently shared items.
+
+Left nav: Folders/Categories, Tags, Shared with me, Favorites, Trash.
+
+File list: compact with inline preview thumbnails, multi-select bulk actions.
+
+Document viewer: embedded PDF + image viewer; show metadata & version history on the side.
+
+Upload UX: drag & drop, progress bar, resumable uploads for large files.
+
+Mobile-first thinking (responsive + PWA)
+
+Security checklist
+
+TLS for all traffic.
+
+Secure pre-signed URLs for uploads/downloads.
+
+Validate file types and scan for malware on upload (virus scanner).
+
+Limit upload size and rate-limit endpoints.
+
+Use secure password hashing (bcrypt/argon2).
+
+Implement RBAC and object-level ACL checks.
+
+Log security-related events and monitor anomalies.
+
+Protect against XSS/CSRF on frontend.
+
+Testing strategy
+
+Unit tests: for business logic and utilities.
+
+Integration tests: API endpoints and DB interactions.
+
+End-to-end tests: Cypress / Playwright for key user flows (upload, preview, share).
+
+Load testing: JMeter / k6 for stressing uploads and search.
+
+Security testing: SAST, dependency scans, periodic pentest if possible.
+
+Deployment & operations
+
+Use CI to run tests and build images.
+
+Store secrets in vault or cloud secret manager.
+
+Blue/green or rolling deployments.
+
+Backups of DB and storage metadata; test restores.
+
+Monitoring and alerting on job failures, high error rate, high storage usage.
+
+Development steps (ordered plan you can follow right away)
+Phase 0 — Discovery & design
+
+Define users & roles, scope MVP vs stretch features.
+
+Write detailed user stories and acceptance criteria for the MVP.
+
+Sketch basic wireframes for upload, file list, viewer, and admin pages.
+
+Choose stack and cloud provider. Decide on S3 vs MinIO, Postgres, search engine.
+
+Phase 1 — Project setup & core infra
+
+Set up repo, branch strategy, CI pipeline.
+
+Configure infrastructure (dev account): DB, object storage, message queue, Redis.
+
+Implement authentication & baseline user management.
+
+Create database schema and run migrations.
+
+Phase 2 — File storage & basic document flows
+
+Implement document metadata endpoints + presigned upload flow.
+
+Implement client-side upload UI (single + bulk with progress).
+
+Implement file download & preview endpoints (serve presigned or proxy).
+
+Implement folder/category model and CRUD UI.
+
+Phase 3 — Search, tags, and metadata
+
+Add tagging and simple search (filename + tags).
+
+Index documents (initially index metadata, later add OCR text).
+
+Add document versioning (basic): store new version entries and switching.
+
+Phase 4 — Sharing, permissions, admin
+
+Implement sharing links, ACL checks, and admin dashboard.
+
+Add audit logging for major actions.
+
+Phase 5 — Reliability & background jobs
+
+Add background workers: thumbnail generation, indexing, virus scanning, OCR queue.
+
+Add retry mechanisms and failure dashboards.
+
+Phase 6 — Polish & hardening
+
+Add 2FA, rate limiting, and advanced access controls.
+
+Add tests (unit, integration, E2E).
+
+Performance tune, add CDN for previews.
+
+Prepare infra for production: backups, monitoring, logging.
+
+Phase 7 — Optional advanced features
+
+Integrations (Drive/Dropbox).
+
+ML category suggestions & PII detection.
+
+Mobile app / PWA.
+
+Acceptance criteria example (MVP)
+
+A registered user can upload a PDF and immediately preview it in the browser.
+
+The user can create a folder, move the document into it, tag it, and later search by tag or filename.
+
+Shared links download the file until expiry and show correct permissions.
+
+System stores metadata & at least two previous versions of an edited document.
+
+Example implementation snippets (conceptual)
+
+Presigned upload flow (pseudo-API):
+
+POST /api/documents → server creates metadata with status uploading, returns presigned URL.
+
+Client uploads file to S3 using presigned URL.
+
+Client calls PUT /api/documents/:id/complete with file checksum and final metadata; server validates and marks uploaded and pushes indexing job.
+
+Search index step:
+
+When complete is called, push job to queue: generate thumbnail, run OCR (if PDF/image), store OCR text, update search index.
+
+Checklist you can use right now
+
+ Create user stories for upload, preview, search, share.
+
+ Choose stack (I recommend React + Node + Postgres + S3).
+
+ Design wireframes for core pages.
+
+ Implement presigned upload flow and simple preview.
+
+ Add tagging & filename search.
+
+ Add audit logs & admin usage dashboard.

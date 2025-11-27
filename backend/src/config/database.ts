@@ -1,5 +1,5 @@
 import { Pool, PoolConfig } from 'pg';
-import { env } from './env';
+import { env, isProduction } from './env';
 import { logger } from '../utils/logger';
 
 const poolConfig: PoolConfig = {
@@ -23,7 +23,9 @@ pool.on('connect', () => {
 
 pool.on('error', (err) => {
   logger.error('Unexpected database error', err);
-  process.exit(-1);
+  if (isProduction) {
+    process.exit(-1);
+  }
 });
 
 // Helper function to test connection

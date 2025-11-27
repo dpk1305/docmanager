@@ -1,4 +1,6 @@
 import winston from 'winston';
+import fs from 'fs';
+import path from 'path';
 import { env } from '../config/env';
 
 const logFormat = winston.format.combine(
@@ -53,4 +55,12 @@ if (env.nodeEnv !== 'production') {
     })
   );
 }
+
+// Ensure logs directory exists
+try {
+  const logsDir = path.join(process.cwd(), 'logs');
+  if (!fs.existsSync(logsDir)) {
+    fs.mkdirSync(logsDir, { recursive: true });
+  }
+} catch {}
 

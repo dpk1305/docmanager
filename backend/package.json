@@ -14,7 +14,8 @@
     "migrate": "node-pg-migrate",
     "migrate:up": "node-pg-migrate up",
     "migrate:down": "node-pg-migrate down",
-    "migrate:create": "node-pg-migrate create"
+    "migrate:create": "node-pg-migrate create",
+    "init:s3": "tsx scripts/initS3Bucket.ts"
   },
   "keywords": ["document-management", "api", "express"],
   "author": "",
@@ -39,7 +40,9 @@
     "pg": "^8.13.1",
     "pg-hstore": "^2.3.4",
     "sharp": "^0.33.5",
-    "winston": "^3.17.0"
+    "winston": "^3.17.0",
+    "otplib": "^12.0.1",
+    "express-rate-limit": "^7.4.0"
   },
   "devDependencies": {
     "@types/bcrypt": "^5.0.2",

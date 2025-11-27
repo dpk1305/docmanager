@@ -1,0 +1,113 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Light theme tokens */
+:root {
+  --bg-page: #F8FAFC;
+  --surface: #FFFFFF;
+  --muted: #6B7280;
+  --accent: #2563EB;
+  --accent-600: #1D4ED8;
+  --danger: #DC2626;
+  --success: #16A34A;
+  --text: #0F172A;
+  --border-light: rgba(15, 23, 42, 0.06); /* subtle light border */
+  --border-dark: rgba(148,163,184,0.16); /* subtle dark border */
+}
+
+/* Dark theme tokens — toggle by adding `dark` class on <html> or <body> */
+.dark {
+  --bg-page: #0B1220;
+  --surface: #0f1724;
+  --muted: #9CA3AF;
+  --accent: #2563EB;
+  --accent-600: #1D4ED8;
+  --danger: #DC2626;
+  --success: #16A34A;
+  --text: #E6EEF8;
+}
+
+/* Base layout */
+html, body, #root {
+  height: 100%;
+}
+
+body {
+  background: var(--bg-page);
+  color: var(--text);
+  font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  transition: background-color 160ms ease, color 160ms ease;
+}
+
+/* Component styles must live inside @layer components so Tailwind can process @apply */
+@layer components {
+  /* Button using CSS vars for color so it responds to theme */
+  .btn {
+    @apply px-3 py-2 rounded-md text-white transition-colors inline-flex items-center gap-2;
+    background-color: var(--accent);
+    border: none;
+  }
+  .btn:hover {
+    background-color: var(--accent-600);
+  }
+  .btn:active { transform: translateY(1px); }
+
+  /* Input — uses surface variable and subtle borders that change with theme */
+  .input {
+    @apply px-3 py-2 rounded-md outline-none w-full transition-shadow;
+    background-color: var(--surface);
+    color: var(--text);
+    border: 1px solid var(--border-light);
+    box-shadow: none;
+  }
+
+  /* When dark mode is active, use the darker border */
+  .dark .input {
+    border-color: var(--border-dark);
+  }
+
+  /* Card example */
+  .card {
+    @apply rounded-lg shadow-sm p-4;
+    background-color: var(--surface);
+    color: var(--text);
+    transition: box-shadow 160ms ease, transform 160ms ease;
+  }
+  .card:hover {
+    @apply shadow-md;
+    transform: translateY(-2px);
+  }
+
+  /* Small utility for muted text */
+  .muted {
+    color: var(--muted);
+  }
+
+  /* Small theme-aware outline focus */
+  .focus-ring {
+    box-shadow: 0 0 0 4px rgba(37,99,235,0.08);
+    outline: none;
+  }
+}
+
+/* Optional: ensure form elements inherit font & color */
+input, textarea, select, button {
+  font-family: inherit;
+  color: inherit;
+}
+
+/* Utility: visually-hidden for accessibility */
+.sr-only {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  padding: 0 !important;
+  margin: -1px !important;
+  overflow: hidden !important;
+  clip: rect(0, 0, 0, 0) !important;
+  white-space: nowrap !important;
+  border: 0 !important;
+}

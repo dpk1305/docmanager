@@ -1,0 +1,421 @@
+Goals
+
+Build a modern, polished, responsive Single Page App (React + TypeScript + Vite + Tailwind) for DocManager that connects to your backend (VITE_API_BASE).
+
+Implement Dark and Light themes with an accessible toggle and system-preference fallback.
+
+Deliver a complete frontend: design system, pages, components, integration with backend, tests, CI, and production-ready build.
+
+Tech stack & tools
+
+React + TypeScript (Vite)
+
+TailwindCSS (darkMode: 'class')
+
+React Router DOM
+
+Axios (or fetch wrapper)
+
+@tanstack/react-query (data fetching) — optional
+
+lucide-react / heroicons for icons
+
+react-dropzone, react-pdf, file-saver
+
+Zustand (or Context) for UI state (theme, user session)
+
+Vitest / React Testing Library for unit tests
+
+Playwright for E2E
+
+Storybook (optional) for components
+
+Nginx (for production static serving) + Dockerfile
+
+GitHub Actions for CI (build/test/deploy)
+
+UI Goals & UX Principles
+
+Minimal, clean, hierarchical layout with soft corners, subtle shadows, and a single accent color.
+
+Accessible (WCAG AA), keyboard navigable, ARIA attributes where needed.
+
+Smooth micro-interactions and feedback.
+
+Fast: critical user flows load within ~1s on 4G emulation.
+
+Themes: Dark and Light with persistence and system preference support.
+
+Design system (tokens) — include theme tokens
+Color tokens (light / dark variants)
+
+--bg-page — light: #F8FAFC, dark: #0B1220
+
+--surface — light: #FFFFFF, dark: #0f1724
+
+--muted — light: #6B7280, dark: #9CA3AF
+
+--accent — #2563EB (use same accent in both modes with subtle shade differences)
+
+--accent-600 — #1D4ED8
+
+--danger — #DC2626
+
+--success — #16A34A
+
+--text — light: #0F172A, dark: #E6EEF8
+
+Implement these as Tailwind theme.extend.colors and as CSS custom properties so theme toggling is easy for non-Tailwind cases.
+
+Typography
+
+Base font: Inter (or system UI)
+
+Sizes: h1 28px, h2 22px, h3 18px, body 16px, small 13px
+
+Line height: 1.3–1.6
+
+Spacing scale: 4 / 8 / 12 / 16 / 20 / 24 / 32 px
+
+Icons
+
+Use Lucide or Heroicons; standardized set: search, upload, folder, tag, settings, share, preview, download, dark/light toggle icons.
+
+Motion
+
+Micro-interactions: 150–250ms ease-out transitions for modals and toasts.
+
+Pages / Routes
+
+/ — Dashboard (recent files, quick upload, stats)
+
+/drive — File manager (list/grid)
+
+/documents/:id — Document detail & preview
+
+/folders/:id — Folder view
+
+/search — Search results
+
+/auth/login, /auth/register, /auth/2fa — Auth pages
+
+/admin — Admin stats (role=admin only)
+
+Component inventory (props & data contracts)
+
+(Provide TypeScript interfaces for each)
+
+Global
+
+AppShell({children}) — topbar, left nav, main content; handles theme provider.
+
+Topbar({onUploadClick, user}) — search, quick upload, theme toggle, user menu.
+
+LeftNav({folders, tags, active}) — responsive nav.
+
+ThemeToggle() — accessible toggle button for dark/light; shows icon and label.
+
+Toaster — global toasts.
+
+File UI
+
+FileList({files, viewMode, onSelect})
+
+FileCard({file, onPreview, onDownload})
+
+FileRow({file, onClick})
+
+Uploader({onComplete}) — drag/drop + file input + progress
+
+DocumentPreview({url, mimeType}) — PDF.js viewer for PDFs, image viewer, fallback.
+
+Modals / Utilities
+
+FolderModal, TagModal, ShareModal, ConfirmDialog
+
+SearchBar({onSearch})
+
+Pagination/InfiniteScroll
+
+ContextMenu for file actions (keyboard accessible)
+
+Types
+interface User { id:string; name:string; email:string; avatarUrl?:string; role:'user'|'admin'; twoFactorEnabled:boolean; }
+interface Document { id:string; name:string; mime_type:string; size:number; storage_key:string; folder_id?:string; owner_id:string; created_at:string; updated_at:string; }
+interface UploadResponse { document: Document; uploadUrl: string; }
+
+API contract (exact calls)
+
+Base: import.meta.env.VITE_API_BASE (e.g. http://localhost:5000/api)
+
+Auth:
+
+POST /auth/register {name,email,password}
+
+POST /auth/login {email,password} → {accessToken}
+
+POST /auth/refresh (cookie-based)
+
+Documents:
+
+POST /documents {name,mime_type,size,folderId?} → { document, uploadUrl }
+
+PUT /documents/:id/complete {checksum, comment?} → {status, versionId}
+
+GET /documents/:id/preview → {url}
+
+GET /documents/:id/download → {url}
+
+DELETE /documents/:id → 204
+
+POST /documents/:id/restore → 200
+
+Folders & Tags:
+
+GET /folders
+
+POST /folders {name,parentId?}
+
+POST /tags {name}
+
+POST /tags/assign {document_id,tag_id}
+
+Search:
+
+GET /search?q=&tagIds=&page=
+
+Admin:
+
+GET /admin/stats
+
+Auth header: Authorization: Bearer <token>. Refresh token handled by cookie.
+
+Dark & Light Mode — Full requirements
+Behavior
+
+On first load: use localStorage preference if present; otherwise use OS prefers-color-scheme.
+
+Persist user choice in localStorage under key docmanager:theme.
+
+Provide three states in internal API: 'light', 'dark', 'system' (system follows OS).
+
+Actual applied theme (resolved) is 'light' or 'dark'.
+
+Theme affects: background, surfaces, text, icons, shadows, and gradient accents. Use CSS variables and Tailwind dark: utilities.
+
+Apply theme by toggling class="dark" on <html> (or <body> if preferred) — Tailwind configured with darkMode: 'class'.
+
+Toggle UI
+
+ThemeToggle component (in Topbar):
+
+Button with aria-pressed and aria-label (e.g., "Toggle color theme").
+
+Shows icon (sun for light, moon for dark). Optionally show label for desktop.
+
+Keyboard focus ring visible, accessible (44px target minimum).
+
+Clicking cycles between light ↔ dark (or optionally opens a small menu for System choice).
+
+Theme switch animations: fade/transition 150ms for background/text color.
+
+Implementation details
+
+Provide ThemeProvider and useTheme() hook:
+
+const { theme, resolvedTheme, setTheme, toggleTheme } = useTheme();
+
+The provider attaches/removes dark class on <html> and listens to system changes if theme === 'system'.
+
+Write unit tests for useTheme to ensure preference persistence and application.
+
+Ensure SSR-safe guards (if you ever render server-side): check typeof window !== 'undefined'.
+
+Accessibility
+
+Toggle has aria-label and visible text alternative (screen-readers).
+
+Color contrast in both themes >= WCAG AA.
+
+Focus state clearly visible in both themes.
+
+Responsive rules (concrete)
+
+Tailwind breakpoints: sm 640, md 768, lg 1024, xl 1280.
+
+Mobile: bottom nav, single-column grid, large touch targets.
+
+Tablet: two-column layout (nav + content).
+
+Desktop: left nav + grid + preview side panel.
+
+Theme toggle visible in Topbar on all sizes; in mobile it can be in the user menu.
+
+UX behaviors & edge cases (including theme specifics)
+
+Uploader:
+
+Validate file.size and file.type client-side using ALLOWED_FILE_TYPES and MAX_FILE_SIZE.
+
+When requesting presign, pass exact file.size (critical for signed content-length).
+
+If presign fails due to signature, retry generation 2x (backoff).
+
+Show progress, error, and success toasts (different visuals for dark/light).
+
+Preview:
+
+PDFs: react-pdf
+
+Images: responsive image lightbox, dark background in dark mode.
+
+Errors:
+
+Nice error UI (card with icon and retry button) — theme-aware styling.
+
+Offline:
+
+Show offline banner in header; preserve uploads queued (optional).
+
+Accessibility checklist (must pass)
+
+Keyboard navigation for all interactive elements.
+
+Focus management for modals & dialogs.
+
+Screen reader labels for toggles, upload, preview modal.
+
+Contrast ratios >= 4.5:1 for primary text in both themes.
+
+All images have alt. Icons that convey meaning have aria-hidden=false + aria-label.
+
+Animations / Motion
+
+Small: 150–200ms for fades/transitions
+
+Toasts: slide in from top-right, fade out after 3.5s
+
+Theme change: use CSS transitions on color properties (avoid heavy layout animations). Respect prefers-reduced-motion.
+
+Security & privacy reminders
+
+Do not store tokens in localStorage for refresh tokens — use httpOnly cookie for refresh tokens as backend does. Access token in memory or localStorage with care.
+
+Sanitize filenames & metadata.
+
+File uploads: virus scanning recommended for production.
+
+Step-by-step build plan for the AI agent (atomic tasks)
+Phase 0 — bootstrap
+
+pnpm create vite frontend --template react-ts (or npm).
+
+Install deps: tailwindcss postcss autoprefixer, react-router-dom, axios, @aws-sdk/* not needed on frontend, lucide-react, react-dropzone, react-pdf, file-saver, zustand (optional), @tanstack/react-query.
+
+Tailwind init and set darkMode: 'class'. Add theme tokens to tailwind.config.js.
+
+Add .env support: VITE_API_BASE.
+
+Phase 1 — skeleton & theme
+
+Add src/lib/theme.tsx (ThemeProvider + useTheme hook) — implement system preference fallback, localStorage, apply/remove dark class on <html>.
+
+Wrap App with ThemeProvider.
+
+Create Topbar with ThemeToggle component.
+
+Implement Tailwind CSS variables & global CSS that uses CSS variables for colors and also Tailwind classes with dark: variants.
+
+Phase 2 — routing, auth & shell
+
+Add AppShell with LeftNav and Topbar. Implement routes for pages with placeholders. Add protected route wrapper for auth.
+
+Implement Auth pages (login/register/2fa) using API contract.
+
+Phase 3 — core features
+
+Build FileList + FileCard + Uploader using react-dropzone.
+
+Ensure Uploader passes file.size when calling /documents.
+
+Use fetch(uploadUrl, {method:'PUT', body:file}) for uploads.
+
+Implement DocumentPreview with react-pdf and image viewer.
+
+Implement Folders/Tags CRUD modals.
+
+Phase 4 — polish & theme adjustments
+
+Apply design tokens across components; ensure both themes look polished (test by toggling).
+
+Add toasts, skeleton loaders, and skeleton for file list.
+
+Add theme-aware images and icons (e.g., invert or swap icon colors).
+
+Phase 5 — testing & CI
+
+Unit tests for useTheme and ThemeToggle.
+
+Playwright E2E test for flows: login → upload → preview (run in CI).
+
+Storybook for major components (optional).
+
+Add GitHub Actions: lint, build, test, build Docker image for frontend, optionally deploy.
+
+Phase 6 — production
+
+Multi-stage Dockerfile for frontend/dist served by Nginx.
+
+nginx.conf for static assets (gzip, cache, fallback index.html), serve over HTTPS (Traefik or certbot).
+
+Update docker-compose.prod.yml to include nginx frontend and mount certs.
+
+Acceptance criteria & QA checklist (with theme specifics)
+
+ The app supports toggling between Light and Dark and persists selection across reloads.
+
+ On first load, app respects OS prefers-color-scheme if the user has not set a preference.
+
+ ThemeToggle is accessible (keyboard, ARIA).
+
+ All pages (Dashboard, Drive, Document detail, Admin) render and are responsive.
+
+ Upload flow works from UI: metadata → presign → upload (PUT) → complete → preview/download.
+
+ Documents preview correctly in both themes (PDF viewer + image lightbox with dark backdrop).
+
+ Keyboard & screen-reader checks pass for critical flows.
+
+ Unit tests for useTheme and theme toggle exist and pass.
+
+ E2E smoke test (login → upload → preview) passes in CI.
+
+ Color contrast in both themes meets WCAG AA.
+
+Small implementation notes & best practices
+
+Use CSS variables for colors and Tailwind dark: for utility classes. This makes theme overrides easier.
+
+Prefer fetch(uploadUrl, { method:'PUT', body:file }) for uploads in the browser. Ensure file.size is passed to backend when requesting presign.
+
+When toggling theme, update localStorage and update document.documentElement.classList (dark present/absent).
+
+Respect prefers-reduced-motion to disable heavy transitions.
+
+Keep the theme provider small, well-tested, and SSR-safe.
+
+Deliverables for each iteration
+
+Commit: ThemeProvider + ThemeToggle + Tailwind config + global CSS with tokens.
+
+Commit: AppShell + Topbar + LeftNav + placeholder routes.
+
+Commit: Auth pages and client auth handling.
+
+Commit: Uploader + document flow integrated with backend.
+
+Commit: Preview components and file manager UI.
+
+Commit: Tests (unit + E2E) and CI config.
+
+Commit: Dockerfile + nginx config for frontend + deployment instruction
