@@ -4,7 +4,6 @@ import { ThemeProvider, useTheme } from './theme'
 
 describe('theme', () => {
   beforeAll(() => {
-    // @ts-expect-error
     window.matchMedia = window.matchMedia || (() => ({ matches: false, addEventListener: () => {}, removeEventListener: () => {} }))
   })
   it('toggles between light and dark', () => {
