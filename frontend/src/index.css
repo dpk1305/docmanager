@@ -50,6 +50,12 @@ body {
     background-color: var(--accent);
     border: none;
   }
+
+  .danger {
+     @apply px-3 py-2 rounded-md text-white transition-colors inline-flex items-center gap-2;
+    background-color: var(--danger);
+    border: none;
+  }
   .btn:hover {
     background-color: var(--accent-600);
   }

@@ -1,421 +1,389 @@
-Goals
+1 — Shared setup tasks (do these first)
 
-Build a modern, polished, responsive Single Page App (React + TypeScript + Vite + Tailwind) for DocManager that connects to your backend (VITE_API_BASE).
+Create or confirm an api utility:
 
-Implement Dark and Light themes with an accessible toggle and system-preference fallback.
+src/lib/api.ts exporting apiClient (axios) preconfigured with baseURL = import.meta.env.VITE_API_BASE.
 
-Deliver a complete frontend: design system, pages, components, integration with backend, tests, CI, and production-ready build.
+Add interceptor to attach Authorization: Bearer <token> from authStore (in-memory or localStorage).
 
-Tech stack & tools
+Create auth state store:
 
-React + TypeScript (Vite)
+src/stores/authStore.ts (Zustand or React Context).
 
-TailwindCSS (darkMode: 'class')
+Expose: user, token, setAuth({user, token}), clearAuth(), isAuthenticated.
 
-React Router DOM
+Persist token (optionally) in localStorage under key docmanager:accessToken. On app init, load token and call /auth/me if available (or rely on decoded token).
 
-Axios (or fetch wrapper)
+Add route guards:
 
-@tanstack/react-query (data fetching) — optional
+PrivateRoute wrapper that redirects to /login when not authenticated.
 
-lucide-react / heroicons for icons
+Ensure VITE_API_BASE env is configured in Netlify for build and locally .env.
 
-react-dropzone, react-pdf, file-saver
+Create reusable UI components:
 
-Zustand (or Context) for UI state (theme, user session)
+Input, Button, Form, Card, Toast, PageHeader.
 
-Vitest / React Testing Library for unit tests
+Add client-side validator util:
 
-Playwright for E2E
+src/lib/validators.ts (email regex, password strength).
 
-Storybook (optional) for components
+2 — Register page (/auth/register)
+Purpose
 
-Nginx (for production static serving) + Dockerfile
+Allow new users to sign up. After successful registration auto-login (if backend returns tokens) or redirect to login page with success message.
 
-GitHub Actions for CI (build/test/deploy)
+Components & files
 
-UI Goals & UX Principles
+src/pages/auth/Register.tsx
 
-Minimal, clean, hierarchical layout with soft corners, subtle shadows, and a single accent color.
+components/AuthForm.tsx (reusable for login/register)
 
-Accessible (WCAG AA), keyboard navigable, ARIA attributes where needed.
+components/PasswordStrengthMeter.tsx (optional)
 
-Smooth micro-interactions and feedback.
+Use Tailwind classes & theme tokens.
 
-Fast: critical user flows load within ~1s on 4G emulation.
+Form fields & UI
 
-Themes: Dark and Light with persistence and system preference support.
+Name (text) — required, max 100 chars.
 
-Design system (tokens) — include theme tokens
-Color tokens (light / dark variants)
+Email — required, valid email.
 
---bg-page — light: #F8FAFC, dark: #0B1220
+Password — required, min 8 chars, show toggle visibility.
 
---surface — light: #FFFFFF, dark: #0f1724
+Confirm Password — required, must match password.
 
---muted — light: #6B7280, dark: #9CA3AF
+Submit button — disabled while submitting.
 
---accent — #2563EB (use same accent in both modes with subtle shade differences)
+Small text: “Already have account? Login” link.
 
---accent-600 — #1D4ED8
+API contract
 
---danger — #DC2626
+POST ${VITE_API_BASE}/auth/register body:
 
---success — #16A34A
+{ "name": "Alice", "email": "alice@example.com", "password": "password123" }
 
---text — light: #0F172A, dark: #E6EEF8
 
-Implement these as Tailwind theme.extend.colors and as CSS custom properties so theme toggling is easy for non-Tailwind cases.
+Expect 201 or 200 success. If server returns accessToken & user, call setAuth.
 
-Typography
+Behaviour & validations
 
-Base font: Inter (or system UI)
+Client-side validate fields before sending.
 
-Sizes: h1 28px, h2 22px, h3 18px, body 16px, small 13px
+Show inline field errors.
 
-Line height: 1.3–1.6
+On submit:
 
-Spacing scale: 4 / 8 / 12 / 16 / 20 / 24 / 32 px
+Disable form + show spinner on button.
 
-Icons
+Call API, handle success/failure.
 
-Use Lucide or Heroicons; standardized set: search, upload, folder, tag, settings, share, preview, download, dark/light toggle icons.
+If success and tokens returned: authStore.setAuth({ user, token }) and redirect to /dashboard.
 
-Motion
+If no tokens returned, redirect to /auth/login and show toast “Registration successful — please login”.
 
-Micro-interactions: 150–250ms ease-out transitions for modals and toasts.
+Handle server errors: show message returned by API (email already exists, etc.)
 
-Pages / Routes
+Accessibility:
 
-/ — Dashboard (recent files, quick upload, stats)
+aria-invalid for invalid fields.
 
-/drive — File manager (list/grid)
+Labels associated with inputs.
 
-/documents/:id — Document detail & preview
+Keyboard navigable (Enter to submit).
 
-/folders/:id — Folder view
+Responsive
 
-/search — Search results
+Centered card on mobile (full width with padding), on desktop show card in middle with width max-w-md.
 
-/auth/login, /auth/register, /auth/2fa — Auth pages
+Acceptance tests
 
-/admin — Admin stats (role=admin only)
+Can create a user with valid inputs → redirected to dashboard (or login).
 
-Component inventory (props & data contracts)
+Shows validation error if email invalid / password mismatch.
 
-(Provide TypeScript interfaces for each)
+Displays server-side error for duplicate email.
 
-Global
+3 — Login page (/auth/login)
+Purpose
 
-AppShell({children}) — topbar, left nav, main content; handles theme provider.
+Authenticate registered users, store token, and open dashboard.
 
-Topbar({onUploadClick, user}) — search, quick upload, theme toggle, user menu.
+Components & files
 
-LeftNav({folders, tags, active}) — responsive nav.
+src/pages/auth/Login.tsx
 
-ThemeToggle() — accessible toggle button for dark/light; shows icon and label.
+Reuse AuthForm.tsx and Input, Button.
 
-Toaster — global toasts.
+Form fields & UI
 
-File UI
+Email — required
 
-FileList({files, viewMode, onSelect})
+Password — required, visibility toggle
 
-FileCard({file, onPreview, onDownload})
+Remember me checkbox (optional) — if true, persist token in localStorage; else store in memory only
 
-FileRow({file, onClick})
+Login button
 
-Uploader({onComplete}) — drag/drop + file input + progress
+Links: Register, Forgot password (if implemented)
 
-DocumentPreview({url, mimeType}) — PDF.js viewer for PDFs, image viewer, fallback.
+Show 2FA input field when server indicates 2FA required (on initial login response).
 
-Modals / Utilities
+API contract
 
-FolderModal, TagModal, ShareModal, ConfirmDialog
+POST ${VITE_API_BASE}/auth/login body:
 
-SearchBar({onSearch})
+{ "email": "alice@example.com", "password": "secret" }
 
-Pagination/InfiniteScroll
 
-ContextMenu for file actions (keyboard accessible)
+If 2FA enabled: backend may respond with 401 + twoFactorRequired or a specific status — implement handling:
 
-Types
-interface User { id:string; name:string; email:string; avatarUrl?:string; role:'user'|'admin'; twoFactorEnabled:boolean; }
-interface Document { id:string; name:string; mime_type:string; size:number; storage_key:string; folder_id?:string; owner_id:string; created_at:string; updated_at:string; }
-interface UploadResponse { document: Document; uploadUrl: string; }
+Prompt for one-time code field and re-submit: { email, password, code }
 
-API contract (exact calls)
+Successful response returns { accessToken, refreshToken? , user }.
 
-Base: import.meta.env.VITE_API_BASE (e.g. http://localhost:5000/api)
+Behaviour
 
-Auth:
+On submit: set loading, call API.
 
-POST /auth/register {name,email,password}
+On success: call authStore.setAuth, navigate to /dashboard.
 
-POST /auth/login {email,password} → {accessToken}
+On 2FA required: show code input and send code along with login payload.
 
-POST /auth/refresh (cookie-based)
+On error: show toast + inline messages.
 
-Documents:
+Accessibility:
 
-POST /documents {name,mime_type,size,folderId?} → { document, uploadUrl }
+aria-label, proper focus management: focus first invalid input if error.
 
-PUT /documents/:id/complete {checksum, comment?} → {status, versionId}
+After successful login focus dashboard main heading.
 
-GET /documents/:id/preview → {url}
+Acceptance tests
 
-GET /documents/:id/download → {url}
+Valid credentials → redirect to /dashboard and store token.
 
-DELETE /documents/:id → 204
+Invalid credentials show proper error.
 
-POST /documents/:id/restore → 200
+2FA flow works: user prompted for code and login succeeds after code.
 
-Folders & Tags:
+4 — Dashboard (/dashboard or / protected)
+Purpose
 
-GET /folders
+Main logged-in area showing user files summary, quick actions, and left sidebar with user name + menu.
 
-POST /folders {name,parentId?}
+Components & files
 
-POST /tags {name}
+src/pages/dashboard/Dashboard.tsx
 
-POST /tags/assign {document_id,tag_id}
+src/components/AppShell.tsx (Topbar + LeftNav + Main content)
 
-Search:
+src/components/LeftNav.tsx
 
-GET /search?q=&tagIds=&page=
+src/components/Topbar.tsx
 
-Admin:
+src/components/QuickUpload.tsx
 
-GET /admin/stats
+src/components/StatsCard.tsx
 
-Auth header: Authorization: Bearer <token>. Refresh token handled by cookie.
+src/components/FileList.tsx (shared with Drive)
 
-Dark & Light Mode — Full requirements
-Behavior
+Left sidebar (LeftNav) details
 
-On first load: use localStorage preference if present; otherwise use OS prefers-color-scheme.
+Top: User avatar (initials if no avatar) + User's name and small email
 
-Persist user choice in localStorage under key docmanager:theme.
+Menu (vertical): Dashboard (overview), Drive (files), Upload, Folders, Tags, Search, Settings, Logout
 
-Provide three states in internal API: 'light', 'dark', 'system' (system follows OS).
+Each menu item: icon + label, keyboard focusable, active state highlight
 
-Actual applied theme (resolved) is 'light' or 'dark'.
+Responsive: collapsible on small screens (hamburger to toggle), on mobile a bottom nav is acceptable
 
-Theme affects: background, surfaces, text, icons, shadows, and gradient accents. Use CSS variables and Tailwind dark: utilities.
+Dashboard main area
 
-Apply theme by toggling class="dark" on <html> (or <body> if preferred) — Tailwind configured with darkMode: 'class'.
+Header: Welcome, <User.name> and quick actions (Upload, New Folder)
 
-Toggle UI
+Cards row: total files, storage used, recent uploads count
 
-ThemeToggle component (in Topbar):
+Recent files list (FileList) showing last 6 files with preview, name, size, date, actions (preview/download/delete)
 
-Button with aria-pressed and aria-label (e.g., "Toggle color theme").
+Quick uploader: drag & drop area or small modal (re-use Uploader component)
 
-Shows icon (sun for light, moon for dark). Optionally show label for desktop.
+Data & API calls
 
-Keyboard focus ring visible, accessible (44px target minimum).
+GET ${VITE_API_BASE}/api or specific endpoints:
 
-Clicking cycles between light ↔ dark (or optionally opens a small menu for System choice).
+GET /api/documents?limit=6&sort=recent
 
-Theme switch animations: fade/transition 150ms for background/text color.
+GET /api/stats (admin only) or GET /api/users/:id/stats
 
-Implementation details
+When clicking Upload:
 
-Provide ThemeProvider and useTheme() hook:
+Use same presign flow: POST /api/documents → uploadUrl → PUT upload → PUT /api/documents/:id/complete
 
-const { theme, resolvedTheme, setTheme, toggleTheme } = useTheme();
+Logout:
 
-The provider attaches/removes dark class on <html> and listens to system changes if theme === 'system'.
+Clear auth store, clear tokens, redirect to /auth/login.
 
-Write unit tests for useTheme to ensure preference persistence and application.
+Optionally call POST /api/auth/logout if implemented.
 
-Ensure SSR-safe guards (if you ever render server-side): check typeof window !== 'undefined'.
+Behaviour & UX
 
-Accessibility
+Loading state skeletons for cards & list.
 
-Toggle has aria-label and visible text alternative (screen-readers).
+Clicking file preview opens preview panel (right side or modal).
 
-Color contrast in both themes >= WCAG AA.
+Bulk select checkboxes (basic).
 
-Focus state clearly visible in both themes.
+Confirm dialogs for destructive actions.
 
-Responsive rules (concrete)
+Accessibility:
 
-Tailwind breakpoints: sm 640, md 768, lg 1024, xl 1280.
+Sidebar nav uses <nav> and aria-current for active item.
 
-Mobile: bottom nav, single-column grid, large touch targets.
+All buttons have aria-label.
 
-Tablet: two-column layout (nav + content).
+Focus trap for upload modal & preview modal.
 
-Desktop: left nav + grid + preview side panel.
+Responsive rules
 
-Theme toggle visible in Topbar on all sizes; in mobile it can be in the user menu.
+Desktop: left sidebar visible, 3-column layout for cards + list + preview panel.
 
-UX behaviors & edge cases (including theme specifics)
+Tablet: left nav collapses to icons, preview modal overlays.
 
-Uploader:
+Mobile: left nav hidden under hamburger; main uses vertical stacking.
 
-Validate file.size and file.type client-side using ALLOWED_FILE_TYPES and MAX_FILE_SIZE.
+Acceptance tests
 
-When requesting presign, pass exact file.size (critical for signed content-length).
+Dashboard loads when authenticated.
 
-If presign fails due to signature, retry generation 2x (backoff).
+Recent files display correct metadata.
 
-Show progress, error, and success toasts (different visuals for dark/light).
+Quick upload completes end-to-end (presign → upload → complete).
 
-Preview:
+Logout clears auth and redirects to login.
 
-PDFs: react-pdf
+5 — LeftNav menu behaviour & tasks (detailed)
 
-Images: responsive image lightbox, dark background in dark mode.
+Implement LeftNav props:
 
-Errors:
+interface LeftNavProps {
+  user: User;
+  active: 'dashboard'|'drive'|'folders'|'tags'|'settings'|'admin';
+  onNavigate: (route:string) => void;
+}
 
-Nice error UI (card with icon and retry button) — theme-aware styling.
 
-Offline:
+Menu items:
 
-Show offline banner in header; preserve uploads queued (optional).
+Dashboard (/dashboard)
 
-Accessibility checklist (must pass)
+Drive (/drive)
 
-Keyboard navigation for all interactive elements.
+Upload (opens upload modal)
 
-Focus management for modals & dialogs.
+Folders (/folders)
 
-Screen reader labels for toggles, upload, preview modal.
+Tags (/tags)
 
-Contrast ratios >= 4.5:1 for primary text in both themes.
+Search (/search)
 
-All images have alt. Icons that convey meaning have aria-hidden=false + aria-label.
+Settings (/settings)
 
-Animations / Motion
+Admin (visible only if user.role === 'admin')
 
-Small: 150–200ms for fades/transitions
+Logout (calls authStore.clearAuth() and redirect)
 
-Toasts: slide in from top-right, fade out after 3.5s
+Accessibility:
 
-Theme change: use CSS transitions on color properties (avoid heavy layout animations). Respect prefers-reduced-motion.
+Each item is a button or NavLink with aria-current="page" when active.
 
-Security & privacy reminders
+Keyboard navigation: up/down arrow keys move focus.
 
-Do not store tokens in localStorage for refresh tokens — use httpOnly cookie for refresh tokens as backend does. Access token in memory or localStorage with care.
+Responsive:
 
-Sanitize filenames & metadata.
+Collapsed variant: show icons only; tooltip on hover.
 
-File uploads: virus scanning recommended for production.
+Mobile: full-screen menu.
 
-Step-by-step build plan for the AI agent (atomic tasks)
-Phase 0 — bootstrap
+6 — Routing plan
 
-pnpm create vite frontend --template react-ts (or npm).
+/auth/register — Register page
 
-Install deps: tailwindcss postcss autoprefixer, react-router-dom, axios, @aws-sdk/* not needed on frontend, lucide-react, react-dropzone, react-pdf, file-saver, zustand (optional), @tanstack/react-query.
+/auth/login — Login page
 
-Tailwind init and set darkMode: 'class'. Add theme tokens to tailwind.config.js.
+/dashboard — Dashboard (protected)
 
-Add .env support: VITE_API_BASE.
+/drive — File manager (protected)
 
-Phase 1 — skeleton & theme
+/documents/:id — Document detail (protected)
 
-Add src/lib/theme.tsx (ThemeProvider + useTheme hook) — implement system preference fallback, localStorage, apply/remove dark class on <html>.
+/folders/:id — Folder view (protected)
 
-Wrap App with ThemeProvider.
+/settings — profile & theme (protected)
 
-Create Topbar with ThemeToggle component.
+Use PrivateRoute wrapper for protected routes.
 
-Implement Tailwind CSS variables & global CSS that uses CSS variables for colors and also Tailwind classes with dark: variants.
+7 — Security & UX considerations
 
-Phase 2 — routing, auth & shell
+Never store refresh token in localStorage; backend should set httpOnly cookie for refresh token. Access token can be in memory or localStorage (you chose).
 
-Add AppShell with LeftNav and Topbar. Implement routes for pages with placeholders. Add protected route wrapper for auth.
+Use HTTPS in production.
 
-Implement Auth pages (login/register/2fa) using API contract.
+Rate-limit login attempts in backend (already done).
 
-Phase 3 — core features
+Validate file size / type client-side using environment MAX_FILE_SIZE and ALLOWED_FILE_TYPES if accessible.
 
-Build FileList + FileCard + Uploader using react-dropzone.
+8 — Tests to implement
 
-Ensure Uploader passes file.size when calling /documents.
+Unit tests (Vitest):
 
-Use fetch(uploadUrl, {method:'PUT', body:file}) for uploads.
+useAuth store tests (login/set/clear).
 
-Implement DocumentPreview with react-pdf and image viewer.
+validators tests (email, password match).
 
-Implement Folders/Tags CRUD modals.
+ThemeProvider tests (persistence).
 
-Phase 4 — polish & theme adjustments
+Integration / E2E (Playwright):
 
-Apply design tokens across components; ensure both themes look polished (test by toggling).
+Register -> Login -> Dashboard -> Upload -> Preview (happy path)
 
-Add toasts, skeleton loaders, and skeleton for file list.
+Login with wrong password shows error
 
-Add theme-aware images and icons (e.g., invert or swap icon colors).
+2FA login flow
 
-Phase 5 — testing & CI
+Logout works
 
-Unit tests for useTheme and ThemeToggle.
+9 — UI polish & accessibility checklist (final acceptance)
 
-Playwright E2E test for flows: login → upload → preview (run in CI).
+All forms have labels and aria-* attributes.
 
-Storybook for major components (optional).
+Color contrast meets WCAG AA for normal text.
 
-Add GitHub Actions: lint, build, test, build Docker image for frontend, optionally deploy.
+Keyboard navigation tested for sidebar, modals, and upload form.
 
-Phase 6 — production
+Focus management: after navigation focus top heading; after modal close return focus to opener.
 
-Multi-stage Dockerfile for frontend/dist served by Nginx.
+Mobile layout is usable (touch targets >= 44px).
 
-nginx.conf for static assets (gzip, cache, fallback index.html), serve over HTTPS (Traefik or certbot).
+Error states show helpful messages and retry options.
 
-Update docker-compose.prod.yml to include nginx frontend and mount certs.
+10 — Example small implementation tasks (atomic, for commits)
 
-Acceptance criteria & QA checklist (with theme specifics)
+Create src/lib/api.ts axios client and export.
 
- The app supports toggling between Light and Dark and persists selection across reloads.
+Create src/stores/authStore.ts.
 
- On first load, app respects OS prefers-color-scheme if the user has not set a preference.
+Implement AuthForm component + Input + Button.
 
- ThemeToggle is accessible (keyboard, ARIA).
+Implement Register page with client validation and API call.
 
- All pages (Dashboard, Drive, Document detail, Admin) render and are responsive.
+Implement Login page with 2FA handling.
 
- Upload flow works from UI: metadata → presign → upload (PUT) → complete → preview/download.
+Create AppShell and LeftNav UI + responsive CSS.
 
- Documents preview correctly in both themes (PDF viewer + image lightbox with dark backdrop).
+Implement Dashboard skeleton and GET /documents?limit=6.
 
- Keyboard & screen-reader checks pass for critical flows.
+Implement Uploader component and integrate presign flow.
 
- Unit tests for useTheme and theme toggle exist and pass.
+Add route guards and wire routes.
 
- E2E smoke test (login → upload → preview) passes in CI.
-
- Color contrast in both themes meets WCAG AA.
-
-Small implementation notes & best practices
-
-Use CSS variables for colors and Tailwind dark: for utility classes. This makes theme overrides easier.
-
-Prefer fetch(uploadUrl, { method:'PUT', body:file }) for uploads in the browser. Ensure file.size is passed to backend when requesting presign.
-
-When toggling theme, update localStorage and update document.documentElement.classList (dark present/absent).
-
-Respect prefers-reduced-motion to disable heavy transitions.
-
-Keep the theme provider small, well-tested, and SSR-safe.
-
-Deliverables for each iteration
-
-Commit: ThemeProvider + ThemeToggle + Tailwind config + global CSS with tokens.
-
-Commit: AppShell + Topbar + LeftNav + placeholder routes.
-
-Commit: Auth pages and client auth handling.
-
-Commit: Uploader + document flow integrated with backend.
-
-Commit: Preview components and file manager UI.
-
-Commit: Tests (unit + E2E) and CI config.
-
-Commit: Dockerfile + nginx config for frontend + deployment instruction
+Add tests for register/login flows.

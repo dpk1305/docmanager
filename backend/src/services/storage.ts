@@ -1,4 +1,4 @@
-import { S3Client, PutObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3';
+import { S3Client, PutObjectCommand, GetObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { env } from '../config/env';
 
@@ -59,5 +59,14 @@ export const getPresignedDownloadUrl = async (key: string): Promise<string> => {
   // console.debug('Presigned GET URL:', url);
 
   return url;
+};
+
+export const deleteObjectByKey = async (key: string): Promise<void> => {
+  const normalizedKey = normalizeKey(key);
+  const command = new DeleteObjectCommand({
+    Bucket: env.storage.bucketName,
+    Key: normalizedKey,
+  });
+  await s3.send(command);
 };
   

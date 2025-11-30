@@ -1,10 +1,32 @@
 import { Router } from 'express';
 import { pool } from '../config/database';
 import { requireAuth } from '../middleware/auth';
-import { getPresignedUploadUrl, getPresignedDownloadUrl } from '../services/storage';
+import { getPresignedUploadUrl, getPresignedDownloadUrl, deleteObjectByKey } from '../services/storage';
 import { randomUUID } from 'crypto';
 
 const router = Router();
+
+router.get('/', requireAuth, async (req, res) => {
+  const user = (req as any).user;
+  const { limit, sort } = req.query as { limit?: string; sort?: string };
+  const lim = Math.min(Math.max(parseInt(limit || '50', 10), 1), 200);
+  const orderBy = sort === 'recent' ? 'updated_at DESC' : 'created_at DESC';
+  try {
+    const result = await pool.query(
+      `SELECT id, name, mime_type, size, storage_key, folder_id, owner_id, created_at, updated_at
+       FROM documents
+       WHERE owner_id = $1 AND (is_deleted IS NULL OR is_deleted = FALSE)
+       ORDER BY ${orderBy}
+       LIMIT $2`,
+      [user.sub, lim]
+    );
+    res.json(result.rows);
+    return;
+  } catch (_err) {
+    res.status(500).json({ error: 'Failed to list documents' });
+    return;
+  }
+});
 
 router.post('/', requireAuth, async (req, res) => {
   const user = (req as any).user;
@@ -101,9 +123,30 @@ router.get('/:id/preview', requireAuth, async (req, res) => {
 
 router.delete('/:id', requireAuth, async (req, res) => {
   const { id } = req.params;
-  await pool.query('UPDATE documents SET is_deleted=TRUE WHERE id=$1', [id]);
-  res.json({ status: 'ok' });
-  return;
+  const client = await pool.connect();
+  try {
+    const docRes = await client.query('SELECT id, storage_key FROM documents WHERE id=$1', [id]);
+    if (!docRes.rowCount) {
+      res.status(404).json({ error: 'Not found' });
+      return;
+    }
+    const doc = docRes.rows[0];
+    await client.query('DELETE FROM document_versions WHERE document_id=$1', [id]);
+    await client.query('DELETE FROM shares WHERE document_id=$1', [id]);
+    await client.query('DELETE FROM documents WHERE id=$1', [id]);
+    try {
+      await deleteObjectByKey(doc.storage_key);
+    } catch (_err) {
+      // ignore storage delete errors to avoid blocking DB deletion
+    }
+    res.json({ status: 'ok' });
+    return;
+  } catch (_err) {
+    res.status(500).json({ error: 'Failed to delete document' });
+    return;
+  } finally {
+    client.release();
+  }
 });
 
 router.post('/:id/restore', requireAuth, async (req, res) => {
