@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import axios from 'axios'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { ThemeProvider } from './lib/theme'
+import { ToastProvider, useToast } from './lib/toast'
 import { Search } from 'lucide-react'
 import Login from './pages/auth/Login'
 import Register from './pages/auth/Register'
@@ -23,6 +24,7 @@ function RootApp() {
   const [docs, setDocs] = useState<Document[]>([])
   const [file, setFile] = useState<File | null>(null)
   const [search, setSearch] = useState('')
+  const toast = useToast()
 
   const api = useMemo(() => axios.create({ baseURL: API_BASE }), [])
 
@@ -34,14 +36,21 @@ function RootApp() {
   const upload = async (f?: File) => {
     const selected = f || file
     if (!selected) return
-    const create = await apiClient.post(
-      '/documents',
-      { name: selected.name, mime_type: selected.type || 'application/octet-stream', size: selected.size },
-    )
-    const { document, uploadUrl } = create.data
-    await fetch(uploadUrl, { method: 'PUT', body: selected, headers: { 'Content-Type': selected.type || 'application/octet-stream' } })
-    await apiClient.put(`/documents/${document.id}/complete`, { checksum: '', comment: 'ui upload' })
-    return document as Document
+    try {
+      const create = await apiClient.post(
+        '/documents',
+        { name: selected.name, mime_type: selected.type || 'application/octet-stream', size: selected.size },
+      )
+      const { document, uploadUrl } = create.data
+      await fetch(uploadUrl, { method: 'PUT', body: selected })
+      await apiClient.put(`/documents/${document.id}/complete`, { checksum: '', comment: 'ui upload' })
+      toast.success('File uploaded successfully')
+      return document as Document
+    } catch (e: any) {
+      const msg = e?.response?.data?.error || e?.message || 'Upload failed'
+      toast.error(msg)
+      throw e
+    }
   }
 
   const preview = async (id: string) => {
@@ -83,7 +92,9 @@ function RootApp() {
 export default function App() {
   return (
     <ThemeProvider>
-      <RootApp />
+      <ToastProvider>
+        <RootApp />
+      </ToastProvider>
     </ThemeProvider>
   )
 }
