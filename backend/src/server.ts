@@ -20,26 +20,35 @@ const app: Application = express();
 // Security middleware
 app.use(helmet());
 const corsOrigins = env.cors.origin.split(',').map((o) => o.trim()).filter(Boolean);
-app.use(
-  cors({
-    origin: (origin, callback) => {
-      if (env.nodeEnv === 'development') {
-        callback(null, true);
-        return;
-      }
-      if (!origin) {
-        callback(null, false);
-        return;
-      }
-      if (corsOrigins.includes(origin)) {
-        callback(null, true);
-        return;
-      }
-      callback(new Error('Not allowed by CORS'));
-    },
-    credentials: true,
-  })
-);
+const corsOptions = {
+  origin: (origin: any, callback: any) => {
+    if (env.nodeEnv === 'development') {
+      callback(null, true);
+      return;
+    }
+    if (!origin) {
+      callback(null, true);
+      return;
+    }
+    if (corsOrigins.length === 0) {
+      callback(new Error('CORS origin not configured'));
+      return;
+    }
+    if (corsOrigins.includes(origin)) {
+      callback(null, true);
+      return;
+    }
+    callback(new Error('Not allowed by CORS'));
+  },
+  credentials: true,
+  methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
+  preflightContinue: false,
+  optionsSuccessStatus: 204,
+};
+
+app.use(cors(corsOptions));
+app.options('*', cors(corsOptions));
 
 // Body parsing middleware
 app.use(express.json({ limit: '10mb' }));
