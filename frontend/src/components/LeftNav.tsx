@@ -1,6 +1,6 @@
 import { NavLink } from 'react-router-dom'
 
-export default function LeftNav({ user, onLogout }: { user: any; onLogout: () => void }) {
+export default function LeftNav({ user, onLogout, onNavigate }: { user: any; onLogout: () => void; onNavigate?: () => void }) {
   return (
     <div className="p-4 space-y-4">
       <div className="space-y-1">
@@ -8,12 +8,11 @@ export default function LeftNav({ user, onLogout }: { user: any; onLogout: () =>
         <div className="text-sm text-muted">{user?.email || ''}</div>
       </div>
       <nav className="grid gap-2">
-        <NavLink className={({ isActive }) => `px-3 py-2 rounded ${isActive ? 'bg-accent text-white' : 'hover:bg-gray-100 dark:hover:bg-gray-800'}`} to="/dashboard">Dashboard</NavLink>
-        <NavLink className={({ isActive }) => `px-3 py-2 rounded ${isActive ? 'bg-accent text-white' : 'hover:bg-gray-100 dark:hover:bg-gray-800'}`} to="/drive">Drive</NavLink>
-        <NavLink className={({ isActive }) => `px-3 py-2 rounded ${isActive ? 'bg-accent text-white' : 'hover:bg-gray-100 dark:hover:bg-gray-800'}`} to="/search">Search</NavLink>
-        <button className="px-3 py-2 rounded hover:bg-gray-100 dark:hover:bg-gray-800 text-left" onClick={onLogout}>Logout</button>
+        <NavLink onClick={onNavigate} className={({ isActive }) => `px-3 py-2 rounded ${isActive ? 'bg-accent text-white' : 'hover:bg-gray-100 dark:hover:bg-gray-800'}`} to="/dashboard">Dashboard</NavLink>
+        <NavLink onClick={onNavigate} className={({ isActive }) => `px-3 py-2 rounded ${isActive ? 'bg-accent text-white' : 'hover:bg-gray-100 dark:hover:bg-gray-800'}`} to="/drive">Drive</NavLink>
+        <NavLink onClick={onNavigate} className={({ isActive }) => `px-3 py-2 rounded ${isActive ? 'bg-accent text-white' : 'hover:bg-gray-100 dark:hover:bg-gray-800'}`} to="/search">Search</NavLink>
+        <button className="px-3 py-2 rounded hover:bg-gray-100 dark:hover:bg-gray-800 text-left" onClick={() => { onNavigate?.(); onLogout(); }}>Logout</button>
       </nav>
     </div>
   )
 }
-
