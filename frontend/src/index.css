@@ -44,6 +44,12 @@ body {
 
 /* Component styles must live inside @layer components so Tailwind can process @apply */
 @layer components {
+  .bg-surface {
+    background-color: var(--surface);
+  }
+  .bg-page {
+    background-color: var(--bg-page);
+  }
   /* Button using CSS vars for color so it responds to theme */
   .btn {
     @apply px-3 py-2 rounded-md text-white transition-colors inline-flex items-center gap-2;
