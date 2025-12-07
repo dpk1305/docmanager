@@ -1,6 +1,7 @@
 {
   "rewrites": [
-    { "source": "/assets/(.*)", "destination": "/assets/$1" },
+    { "source": "/:any*/assets/:rest*", "destination": "/assets/:rest*" },
+    { "source": "/assets/:rest*", "destination": "/assets/:rest*" },
     { "source": "/favicon.ico", "destination": "/favicon.ico" },
     { "source": "/robots.txt", "destination": "/robots.txt" },
     { "source": "/api/(.*)", "destination": "/api/$1" },
