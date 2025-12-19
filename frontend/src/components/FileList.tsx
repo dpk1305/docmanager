@@ -28,6 +28,8 @@ export default function FileList({ files, onPreview, onDownload, onDelete }: { f
             return
           }
         } catch {}
+        setViewerUrl('')
+        return
       }
       const url = URL.createObjectURL(r.data as Blob)
       setViewerUrl(url)
