@@ -10,6 +10,36 @@ export default function FileList({ files, onPreview, onDownload, onDelete }: { f
   const [thumbs, setThumbs] = useState<Record<string, string>>({})
   const containerRef = useRef<HTMLDivElement | null>(null)
   const [thumbWidth, setThumbWidth] = useState<number>(320)
+  const [active, setActive] = useState<Document | null>(null)
+  const [viewerUrl, setViewerUrl] = useState<string>('')
+
+  const openPreview = async (d: Document) => {
+    try {
+      setActive(d)
+      setViewerUrl('')
+      if (d.mime_type.startsWith('image/')) {
+        const r = await apiClient.get(`/documents/${d.id}/preview`, { params: { proxy: true }, responseType: 'blob' })
+        const url = URL.createObjectURL(r.data as Blob)
+        setViewerUrl(url)
+      } else if (d.mime_type === 'application/pdf') {
+        const r = await apiClient.get(`/documents/${d.id}/preview`, { params: { proxy: true }, responseType: 'blob' })
+        const url = URL.createObjectURL(r.data as Blob)
+        setViewerUrl(url)
+      } else {
+        const r = await apiClient.get(`/documents/${d.id}/preview`, { params: { proxy: true }, responseType: 'blob' })
+        const url = URL.createObjectURL(r.data as Blob)
+        setViewerUrl(url)
+      }
+    } catch {
+      setViewerUrl(generatePlaceholderThumbnail(d.name))
+    }
+  }
+
+  const closePreview = () => {
+    setActive(null)
+    if (viewerUrl.startsWith('blob:')) URL.revokeObjectURL(viewerUrl)
+    setViewerUrl('')
+  }
 
   useEffect(() => {
     const el = containerRef.current
@@ -71,13 +101,31 @@ export default function FileList({ files, onPreview, onDownload, onDelete }: { f
             <div className="font-medium truncate" title={d.name}>{d.name}</div>
             <div className="text-sm text-muted">{d.mime_type} • {formatBytes(d.size || 0)} • {new Date(d.updated_at).toLocaleString()}</div>
             <div className="flex gap-2 pt-2">
-              <button className="btn" onClick={() => onPreview(d.id)}>Preview</button>
+              <button className="btn" onClick={() => openPreview(d)}>Preview</button>
               <button className="btn" onClick={() => onDownload(d.id)}>Download</button>
               {onDelete ? <button className="danger" onClick={() => { if (confirm('Delete this document?')) onDelete(d.id) }}>Delete</button> : null}
             </div>
           </div>
         </div>
       ))}
+      {active ? (
+        <div className="fixed inset-0 z-50">
+          <div className="absolute inset-0 bg-black/50" onClick={closePreview} />
+          <div className="absolute inset-6 md:inset-12 bg-surface rounded-lg shadow-lg overflow-auto p-4">
+            <div className="flex justify-between items-center mb-3">
+              <div className="font-semibold truncate" title={active.name}>{active.name}</div>
+              <button className="btn" onClick={closePreview}>Close</button>
+            </div>
+            {viewerUrl ? (
+              <div className="max-h-[70vh] overflow-auto">
+                <PreviewContent url={viewerUrl} mime={active.mime_type} />
+              </div>
+            ) : (
+              <div className="text-sm text-muted">Loading preview…</div>
+            )}
+          </div>
+        </div>
+      ) : null}
     </div>
   )
 }
@@ -108,6 +156,18 @@ async function renderPdfBufferToDataUrl(buf: ArrayBuffer, width: number): Promis
   } catch {
     return ''
   }
+}
+
+function PreviewContent({ url, mime }: { url: string; mime: string }) {
+  if (mime === 'application/pdf') {
+    // react-pdf can consume blob URLs via DocumentPreview component, but
+    // for simplicity we use an <iframe> for full document viewing here.
+    return <iframe src={url} className="w-full h-[70vh]" />
+  }
+  if (mime.startsWith('image/')) {
+    return <img src={url} className="max-w-full max-h-[70vh]" />
+  }
+  return <a href={url} target="_blank">Open</a>
 }
 
 function generatePlaceholderThumbnail(name: string): string {
