@@ -36,10 +36,10 @@ export default function FileList({ files, onPreview, onDownload, onDelete }: { f
             const dataUrl = await renderPdfToDataUrl(url, thumbWidth)
             entries.push([f.id, dataUrl])
           } else {
-            entries.push([f.id, ''])
+            entries.push([f.id, generatePlaceholderThumbnail(f.name)])
           }
         } catch {
-          entries.push([f.id, ''])
+          entries.push([f.id, generatePlaceholderThumbnail(f.name)])
         }
       }
       if (mounted) setThumbs(Object.fromEntries(entries))
@@ -86,7 +86,10 @@ function formatBytes(n: number) {
 
 async function renderPdfToDataUrl(url: string, width: number): Promise<string> {
   try {
-    const loadingTask = pdfjs.getDocument(url)
+    const resp = await fetch(url, { mode: 'cors' })
+    if (!resp.ok) throw new Error('pdf fetch failed')
+    const buf = await resp.arrayBuffer()
+    const loadingTask = pdfjs.getDocument({ data: buf })
     const pdf = await loadingTask.promise
     const page = await pdf.getPage(1)
     const viewport = page.getViewport({ scale: 1 })
@@ -102,4 +105,22 @@ async function renderPdfToDataUrl(url: string, width: number): Promise<string> {
   } catch {
     return ''
   }
+}
+
+function generatePlaceholderThumbnail(name: string): string {
+  const canvas = document.createElement('canvas')
+  canvas.width = 640
+  canvas.height = 360
+  const ctx = canvas.getContext('2d')!
+  const grad = ctx.createLinearGradient(0, 0, 640, 360)
+  grad.addColorStop(0, '#0B1736')
+  grad.addColorStop(1, '#13224E')
+  ctx.fillStyle = grad
+  ctx.fillRect(0, 0, 640, 360)
+  ctx.fillStyle = 'rgba(255,255,255,0.9)'
+  ctx.font = 'bold 28px Inter, Arial, sans-serif'
+  const text = (name || '').slice(0, 40)
+  ctx.textAlign = 'center'
+  ctx.fillText(text, 320, 196)
+  return canvas.toDataURL('image/png')
 }
