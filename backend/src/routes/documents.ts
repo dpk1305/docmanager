@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { pool } from '../config/database';
 import { requireAuth } from '../middleware/auth';
-import { getPresignedUploadUrl, getPresignedDownloadUrl, deleteObjectByKey } from '../services/storage';
+import { getPresignedUploadUrl, getPresignedDownloadUrl, deleteObjectByKey, getObjectByKey } from '../services/storage';
 import { randomUUID } from 'crypto';
 
 const router = Router();
@@ -111,12 +111,32 @@ router.get('/:id/download', requireAuth, async (req, res) => {
 
 router.get('/:id/preview', requireAuth, async (req, res) => {
   const { id } = req.params;
-  const result = await pool.query('SELECT storage_key FROM documents WHERE id=$1', [id]);
+  const proxy = String((req.query.proxy as string) || '').toLowerCase() === 'true';
+  const result = await pool.query('SELECT storage_key, mime_type FROM documents WHERE id=$1', [id]);
   if (!result.rowCount) {
     res.status(404).json({ error: 'Not found' });
     return;
   }
-  const url = await getPresignedDownloadUrl(result.rows[0].storage_key);
+  const { storage_key, mime_type } = result.rows[0] as { storage_key: string; mime_type: string };
+  if (proxy) {
+    try {
+      const obj = await getObjectByKey(storage_key);
+      const ct = obj.ContentType || mime_type || 'application/octet-stream';
+      if (ct) res.setHeader('Content-Type', ct);
+      if (obj.ContentLength) res.setHeader('Content-Length', String(obj.ContentLength));
+      const body: any = obj.Body;
+      if (body && typeof body.pipe === 'function') {
+        body.pipe(res);
+      } else {
+        res.status(500).json({ error: 'Preview unavailable' });
+      }
+      return;
+    } catch (_err) {
+      res.status(500).json({ error: 'Failed to proxy preview' });
+      return;
+    }
+  }
+  const url = await getPresignedDownloadUrl(storage_key);
   res.json({ url });
   return;
 });

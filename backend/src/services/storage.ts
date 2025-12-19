@@ -61,6 +61,16 @@ export const getPresignedDownloadUrl = async (key: string): Promise<string> => {
   return url;
 };
 
+export const getObjectByKey = async (key: string) => {
+  const normalizedKey = normalizeKey(key);
+  const command = new GetObjectCommand({
+    Bucket: env.storage.bucketName,
+    Key: normalizedKey,
+  });
+  const resp = await s3.send(command);
+  return resp;
+};
+
 export const deleteObjectByKey = async (key: string): Promise<void> => {
   const normalizedKey = normalizeKey(key);
   const command = new DeleteObjectCommand({

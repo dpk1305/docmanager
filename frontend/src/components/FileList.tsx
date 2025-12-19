@@ -17,19 +17,20 @@ export default function FileList({ files, onPreview, onDownload, onDelete }: { f
     try {
       setActive(d)
       setViewerUrl('')
-      if (d.mime_type.startsWith('image/')) {
-        const r = await apiClient.get(`/documents/${d.id}/preview`, { params: { proxy: true }, responseType: 'blob' })
-        const url = URL.createObjectURL(r.data as Blob)
-        setViewerUrl(url)
-      } else if (d.mime_type === 'application/pdf') {
-        const r = await apiClient.get(`/documents/${d.id}/preview`, { params: { proxy: true }, responseType: 'blob' })
-        const url = URL.createObjectURL(r.data as Blob)
-        setViewerUrl(url)
-      } else {
-        const r = await apiClient.get(`/documents/${d.id}/preview`, { params: { proxy: true }, responseType: 'blob' })
-        const url = URL.createObjectURL(r.data as Blob)
-        setViewerUrl(url)
+      const r = await apiClient.get(`/documents/${d.id}/preview`, { params: { proxy: true }, responseType: 'blob' })
+      const ct = (r.headers['content-type'] || '') as string
+      if (ct.includes('application/json')) {
+        const text = await (r.data as Blob).text()
+        try {
+          const j = JSON.parse(text)
+          if (j && typeof j.url === 'string') {
+            setViewerUrl(j.url)
+            return
+          }
+        } catch {}
       }
+      const url = URL.createObjectURL(r.data as Blob)
+      setViewerUrl(url)
     } catch {
       setViewerUrl(generatePlaceholderThumbnail(d.name))
     }
