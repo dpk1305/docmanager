@@ -4,28 +4,32 @@
 
 /* Light theme tokens */
 :root {
-  --bg-page: #F8FAFC;
+  --bg-page: #F6F8FC;
   --surface: #FFFFFF;
-  --muted: #6B7280;
-  --accent: #2563EB;
-  --accent-600: #1D4ED8;
-  --danger: #DC2626;
-  --success: #16A34A;
+  --muted: #64748B;
+  --accent: #2B6AEF;
+  --accent-600: #1D57D9;
+  --danger: #EF4444;
+  --success: #22C55E;
   --text: #0F172A;
-  --border-light: rgba(15, 23, 42, 0.06); /* subtle light border */
-  --border-dark: rgba(148,163,184,0.16); /* subtle dark border */
+  --border-light: rgba(15, 23, 42, 0.08);
+  --border-dark: rgba(148,163,184,0.18);
+  --header-gradient-start: #0B1736;
+  --header-gradient-end: #13224E;
 }
 
 /* Dark theme tokens — toggle by adding `dark` class on <html> or <body> */
 .dark {
-  --bg-page: #0B1220;
-  --surface: #0f1724;
+  --bg-page: #0A1024;
+  --surface: #0F1729;
   --muted: #9CA3AF;
-  --accent: #2563EB;
-  --accent-600: #1D4ED8;
-  --danger: #DC2626;
-  --success: #16A34A;
+  --accent: #4C86FF;
+  --accent-600: #2563EB;
+  --danger: #F87171;
+  --success: #34D399;
   --text: #E6EEF8;
+  --header-gradient-start: #0A132E;
+  --header-gradient-end: #142757;
 }
 
 /* Base layout */
@@ -44,6 +48,9 @@ body {
 
 /* Component styles must live inside @layer components so Tailwind can process @apply */
 @layer components {
+  .bg-gradient-header {
+    background-image: linear-gradient(90deg, var(--header-gradient-start), var(--header-gradient-end));
+  }
   .bg-surface {
     background-color: var(--surface);
   }
@@ -83,7 +90,7 @@ body {
 
   /* Card example */
   .card {
-    @apply rounded-lg shadow-sm p-4;
+    @apply rounded-xl shadow-sm p-4 border;
     background-color: var(--surface);
     color: var(--text);
     transition: box-shadow 160ms ease, transform 160ms ease;
@@ -92,6 +99,17 @@ body {
     @apply shadow-md;
     transform: translateY(-2px);
   }
+
+  .kpi {
+    @apply rounded-xl p-4 flex items-center gap-3 border;
+    background-color: var(--surface);
+  }
+  .kpi-icon {
+    @apply w-9 h-9 rounded-lg flex items-center justify-center text-white;
+    background-color: var(--accent);
+  }
+  .kpi-title { color: var(--muted); }
+}
 
   /* Small utility for muted text */
   .muted {
@@ -103,7 +121,6 @@ body {
     box-shadow: 0 0 0 4px rgba(37,99,235,0.08);
     outline: none;
   }
-}
 
 /* Optional: ensure form elements inherit font & color */
 input, textarea, select, button {

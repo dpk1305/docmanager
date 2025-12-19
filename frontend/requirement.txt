@@ -1,389 +1,285 @@
-1 — Shared setup tasks (do these first)
+1. Design System & Style Foundation
 
-Create or confirm an api utility:
+Tasks
 
-src/lib/api.ts exporting apiClient (axios) preconfigured with baseURL = import.meta.env.VITE_API_BASE.
+Create a design system with color variables, typography, spacing, and reusable UI components.
 
-Add interceptor to attach Authorization: Bearer <token> from authStore (in-memory or localStorage).
+Define primary/secondary colors, success/error states.
 
-Create auth state store:
+Build light & dark mode palettes (CSS variables or Tailwind config).
 
-src/stores/authStore.ts (Zustand or React Context).
+Define global typography (font sizes, headings, body text, labels).
 
-Expose: user, token, setAuth({user, token}), clearAuth(), isAuthenticated.
+Set layout grid & spacing scale.
 
-Persist token (optionally) in localStorage under key docmanager:accessToken. On app init, load token and call /auth/me if available (or rely on decoded token).
+Deliverables
 
-Add route guards:
+Design tokens (or Tailwind config).
 
-PrivateRoute wrapper that redirects to /login when not authenticated.
+Dark/Light mode CSS vars.
 
-Ensure VITE_API_BASE env is configured in Netlify for build and locally .env.
+UI style guide.
 
-Create reusable UI components:
+🧭 2. Global Layout & Structure
 
-Input, Button, Form, Card, Toast, PageHeader.
+Tasks
 
-Add client-side validator util:
+Build the following layout components:
 
-src/lib/validators.ts (email regex, password strength).
+Top navigation bar (logo + user profile + dark/light toggle)
 
-2 — Register page (/auth/register)
-Purpose
+Sidebar navigation menu
 
-Allow new users to sign up. After successful registration auto-login (if backend returns tokens) or redirect to login page with success message.
+Main content area (responsive grid)
 
-Components & files
+Footer (optional/brand info)
 
-src/pages/auth/Register.tsx
+Sidebar should contain:
 
-components/AuthForm.tsx (reusable for login/register)
+App logo/title
 
-components/PasswordStrengthMeter.tsx (optional)
+Menu items (Dashboard, Documents, Upload, Settings, Logout)
 
-Use Tailwind classes & theme tokens.
+Collapsed state for narrow screens
 
-Form fields & UI
+Deliverables
 
-Name (text) — required, max 100 chars.
+Layout component wrapping all pages.
 
-Email — required, valid email.
+Responsive sidebar.
 
-Password — required, min 8 chars, show toggle visibility.
+🌗 3. Dark Mode / Light Mode
 
-Confirm Password — required, must match password.
+Tasks
 
-Submit button — disabled while submitting.
+Add a toggle button in top nav to switch dark/light mode.
 
-Small text: “Already have account? Login” link.
+Persist mode in localStorage or browser preference.
 
-API contract
+Use CSS variables or Tailwind JIT dark mode:
 
-POST ${VITE_API_BASE}/auth/register body:
+Support smooth theme transitions.
 
-{ "name": "Alice", "email": "alice@example.com", "password": "password123" }
+Ensure all UI elements adapt (cards, backgrounds, text, borders).
 
+Deliverables
 
-Expect 201 or 200 success. If server returns accessToken & user, call setAuth.
+Theme context/provider (React).
 
-Behaviour & validations
+Dark/Light CSS utilities.
 
-Client-side validate fields before sending.
+🏠 4. Dashboard Page
 
-Show inline field errors.
+Tasks
 
-On submit:
+Display overview cards with key stats:
 
-Disable form + show spinner on button.
+Total users
 
-Call API, handle success/failure.
+Total documents
 
-If success and tokens returned: authStore.setAuth({ user, token }) and redirect to /dashboard.
+Storage usage
 
-If no tokens returned, redirect to /auth/login and show toast “Registration successful — please login”.
+Recent uploads
 
-Handle server errors: show message returned by API (email already exists, etc.)
+Add widgets like:
 
-Accessibility:
+Bar/line charts (documents per category, uploads per day)
 
-aria-invalid for invalid fields.
+Recent activity feed
 
-Labels associated with inputs.
+Alerts (e.g., upload errors)
 
-Keyboard navigable (Enter to submit).
+Use animations/hover states for cards.
 
-Responsive
+Deliverables
 
-Centered card on mobile (full width with padding), on desktop show card in middle with width max-w-md.
+Dashboard UI (cards + charts + activity)
 
-Acceptance tests
+Chart integration (Recharts / Chart.js / ApexCharts)
 
-Can create a user with valid inputs → redirected to dashboard (or login).
+📄 5. Documents List Page
 
-Shows validation error if email invalid / password mismatch.
+Tasks
 
-Displays server-side error for duplicate email.
+Build a table or grid view of documents:
 
-3 — Login page (/auth/login)
-Purpose
+Columns: Name, Owner, Size, Type, Uploaded At, Actions
 
-Authenticate registered users, store token, and open dashboard.
+Add:
 
-Components & files
+Search bar
 
-src/pages/auth/Login.tsx
+Filter (by type, owner, date range)
 
-Reuse AuthForm.tsx and Input, Button.
+Sort by name/date/size
 
-Form fields & UI
+Pagination controls
 
-Email — required
+Actions on each row:
 
-Password — required, visibility toggle
+Download
 
-Remember me checkbox (optional) — if true, persist token in localStorage; else store in memory only
+Delete
 
-Login button
+View details
 
-Links: Register, Forgot password (if implemented)
+Deliverables
 
-Show 2FA input field when server indicates 2FA required (on initial login response).
+Document list component
 
-API contract
+Pagination & filters UI
 
-POST ${VITE_API_BASE}/auth/login body:
+📤 6. Upload & Presigned Flow
 
-{ "email": "alice@example.com", "password": "secret" }
+Tasks
 
+Create an upload UI:
 
-If 2FA enabled: backend may respond with 401 + twoFactorRequired or a specific status — implement handling:
+Drag-and-drop area
 
-Prompt for one-time code field and re-submit: { email, password, code }
+File list preview
 
-Successful response returns { accessToken, refreshToken? , user }.
+Upload progress indicators
 
-Behaviour
+Show success/failure for uploads.
 
-On submit: set loading, call API.
+Use backend presigned URLs integration.
 
-On success: call authStore.setAuth, navigate to /dashboard.
+Deliverables
 
-On 2FA required: show code input and send code along with login payload.
+Upload page with progress
 
-On error: show toast + inline messages.
+Integration with API upload endpoints
 
-Accessibility:
+👤 7. User Profile / Authentication UI
 
-aria-label, proper focus management: focus first invalid input if error.
+Tasks
 
-After successful login focus dashboard main heading.
+Build Register & Login pages:
 
-Acceptance tests
+Form inputs with validation
 
-Valid credentials → redirect to /dashboard and store token.
+Show error/success messages
 
-Invalid credentials show proper error.
+Redirect to Dashboard after login
 
-2FA flow works: user prompted for code and login succeeds after code.
+Add password visibility toggle.
 
-4 — Dashboard (/dashboard or / protected)
-Purpose
+Update sidebar to show signed-in user name & avatar.
 
-Main logged-in area showing user files summary, quick actions, and left sidebar with user name + menu.
+Deliverables
 
-Components & files
+Auth UI (register/login)
 
-src/pages/dashboard/Dashboard.tsx
+API integration
 
-src/components/AppShell.tsx (Topbar + LeftNav + Main content)
+🆘 8. Document Details / Preview Page
 
-src/components/LeftNav.tsx
+Tasks
 
-src/components/Topbar.tsx
+Clicking on a document shows a modal or details page:
 
-src/components/QuickUpload.tsx
+Document name, type, size
 
-src/components/StatsCard.tsx
+Uploaded by, upload date
 
-src/components/FileList.tsx (shared with Drive)
+Preview if possible (PDF/image)
 
-Left sidebar (LeftNav) details
+Action buttons (Download / Delete / Share)
 
-Top: User avatar (initials if no avatar) + User's name and small email
+Ensure mobile responsiveness.
 
-Menu (vertical): Dashboard (overview), Drive (files), Upload, Folders, Tags, Search, Settings, Logout
+Deliverables
 
-Each menu item: icon + label, keyboard focusable, active state highlight
+Document details component
 
-Responsive: collapsible on small screens (hamburger to toggle), on mobile a bottom nav is acceptable
+⚙️ 9. Responsive Behavior
 
-Dashboard main area
+Tasks
 
-Header: Welcome, <User.name> and quick actions (Upload, New Folder)
+Ensure layout supports:
 
-Cards row: total files, storage used, recent uploads count
+Mobile screens: collapsible sidebar, stacked cards
 
-Recent files list (FileList) showing last 6 files with preview, name, size, date, actions (preview/download/delete)
+Tablet screens: flexible grid
 
-Quick uploader: drag & drop area or small modal (re-use Uploader component)
+Desktop: full dashboards, table views
 
-Data & API calls
+Use breakpoints consistently.
 
-GET ${VITE_API_BASE}/api or specific endpoints:
+Deliverables
 
-GET /api/documents?limit=6&sort=recent
+Media queries or Tailwind breakpoints
 
-GET /api/stats (admin only) or GET /api/users/:id/stats
+🎛️ 10. UI Polishing & Micro-interactions
 
-When clicking Upload:
+Tasks
 
-Use same presign flow: POST /api/documents → uploadUrl → PUT upload → PUT /api/documents/:id/complete
+Add subtle animations:
 
-Logout:
+Hover effects on cards & buttons
 
-Clear auth store, clear tokens, redirect to /auth/login.
+Loading skeletons for tables
 
-Optionally call POST /api/auth/logout if implemented.
+Transition for theme change
 
-Behaviour & UX
+Use icons from a consistent set (e.g., Heroicons/Material)
 
-Loading state skeletons for cards & list.
+Deliverables
 
-Clicking file preview opens preview panel (right side or modal).
+Enhanced UI polish
 
-Bulk select checkboxes (basic).
+Consistent iconography
 
-Confirm dialogs for destructive actions.
+🧪 11. Accessibility & ARIA
 
-Accessibility:
+Tasks
 
-Sidebar nav uses <nav> and aria-current for active item.
+Ensure keyboard navigation works.
 
-All buttons have aria-label.
+Add aria labels for important controls.
 
-Focus trap for upload modal & preview modal.
+Ensure color contrast meets accessibility standards.
 
-Responsive rules
+Deliverables
 
-Desktop: left sidebar visible, 3-column layout for cards + list + preview panel.
+Accessibility audit checklist passed
 
-Tablet: left nav collapses to icons, preview modal overlays.
+💾 12. Deployment & State Persistence
 
-Mobile: left nav hidden under hamburger; main uses vertical stacking.
+Tasks
 
-Acceptance tests
+Ensure theme (dark/light) persists
 
-Dashboard loads when authenticated.
+Store auth tokens securely (localStorage or secure cookie)
 
-Recent files display correct metadata.
+Cache UI state (table page, filters)
 
-Quick upload completes end-to-end (presign → upload → complete).
+Deliverables
 
-Logout clears auth and redirects to login.
+Persistent UI state
 
-5 — LeftNav menu behaviour & tasks (detailed)
+Auth state integrated
 
-Implement LeftNav props:
+📌 Component Breakdown Example
 
-interface LeftNavProps {
-  user: User;
-  active: 'dashboard'|'drive'|'folders'|'tags'|'settings'|'admin';
-  onNavigate: (route:string) => void;
-}
+To help with development, here’s a suggested component list:
 
+Component	Description
+Sidebar	Navigation drawer with icons, active state
+Navbar	Top bar with toggles & profile
+DashboardCards	Summary KPIs
+DocumentsTable	Grid/table for docs
+UploadArea	Drag & drop upload UI
+DocumentPreview	Modal or inline preview
+SearchFilter	Global search & filter UI
+ThemeToggle	Dark/Light switch
+Pagination	List pagination controls
+🎨 Design Style Notes (based on PolicyPilot inspiration)
 
-Menu items:
-
-Dashboard (/dashboard)
-
-Drive (/drive)
-
-Upload (opens upload modal)
-
-Folders (/folders)
-
-Tags (/tags)
-
-Search (/search)
-
-Settings (/settings)
-
-Admin (visible only if user.role === 'admin')
-
-Logout (calls authStore.clearAuth() and redirect)
-
-Accessibility:
-
-Each item is a button or NavLink with aria-current="page" when active.
-
-Keyboard navigation: up/down arrow keys move focus.
-
-Responsive:
-
-Collapsed variant: show icons only; tooltip on hover.
-
-Mobile: full-screen menu.
-
-6 — Routing plan
-
-/auth/register — Register page
-
-/auth/login — Login page
-
-/dashboard — Dashboard (protected)
-
-/drive — File manager (protected)
-
-/documents/:id — Document detail (protected)
-
-/folders/:id — Folder view (protected)
-
-/settings — profile & theme (protected)
-
-Use PrivateRoute wrapper for protected routes.
-
-7 — Security & UX considerations
-
-Never store refresh token in localStorage; backend should set httpOnly cookie for refresh token. Access token can be in memory or localStorage (you chose).
-
-Use HTTPS in production.
-
-Rate-limit login attempts in backend (already done).
-
-Validate file size / type client-side using environment MAX_FILE_SIZE and ALLOWED_FILE_TYPES if accessible.
-
-8 — Tests to implement
-
-Unit tests (Vitest):
-
-useAuth store tests (login/set/clear).
-
-validators tests (email, password match).
-
-ThemeProvider tests (persistence).
-
-Integration / E2E (Playwright):
-
-Register -> Login -> Dashboard -> Upload -> Preview (happy path)
-
-Login with wrong password shows error
-
-2FA login flow
-
-Logout works
-
-9 — UI polish & accessibility checklist (final acceptance)
-
-All forms have labels and aria-* attributes.
-
-Color contrast meets WCAG AA for normal text.
-
-Keyboard navigation tested for sidebar, modals, and upload form.
-
-Focus management: after navigation focus top heading; after modal close return focus to opener.
-
-Mobile layout is usable (touch targets >= 44px).
-
-Error states show helpful messages and retry options.
-
-10 — Example small implementation tasks (atomic, for commits)
-
-Create src/lib/api.ts axios client and export.
-
-Create src/stores/authStore.ts.
-
-Implement AuthForm component + Input + Button.
-
-Implement Register page with client validation and API call.
-
-Implement Login page with 2FA handling.
-
-Create AppShell and LeftNav UI + responsive CSS.
-
-Implement Dashboard skeleton and GET /documents?limit=6.
-
-Implement Uploader component and integrate presign flow.
-
-Add route guards and wire routes.
-
-Add tests for register/login flows.
+✔ Clean card-based layout with spacing and subtle shadows
+✔ Visual hierarchy (large headings, stats)
+✔ Consistent color palette (accent colors for actions, clear contrast)
+✔ Minimal but expressive icons & labels
+✔ Modular widgets that can be rearranged
