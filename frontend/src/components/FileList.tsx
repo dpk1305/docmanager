@@ -24,16 +24,19 @@ export default function FileList({ files, onPreview, onDownload, onDelete }: { f
 
   useEffect(() => {
     let mounted = true
+    const blobsToRevoke: string[] = []
     const run = async () => {
       const entries: Array<[string, string]> = []
       for (const f of files) {
         try {
-          const r = await apiClient.get(`/documents/${f.id}/preview`)
-          const url = r.data.url as string
           if (f.mime_type.startsWith('image/')) {
-            entries.push([f.id, url])
+            const r = await apiClient.get(`/documents/${f.id}/preview`, { params: { proxy: true }, responseType: 'blob' })
+            const blobUrl = URL.createObjectURL(r.data as Blob)
+            blobsToRevoke.push(blobUrl)
+            entries.push([f.id, blobUrl])
           } else if (f.mime_type === 'application/pdf') {
-            const dataUrl = await renderPdfToDataUrl(url, thumbWidth)
+            const r = await apiClient.get(`/documents/${f.id}/preview`, { params: { proxy: true }, responseType: 'arraybuffer' })
+            const dataUrl = await renderPdfBufferToDataUrl(r.data as ArrayBuffer, thumbWidth)
             entries.push([f.id, dataUrl])
           } else {
             entries.push([f.id, generatePlaceholderThumbnail(f.name)])
@@ -45,7 +48,10 @@ export default function FileList({ files, onPreview, onDownload, onDelete }: { f
       if (mounted) setThumbs(Object.fromEntries(entries))
     }
     run()
-    return () => { mounted = false }
+    return () => {
+      mounted = false
+      blobsToRevoke.forEach((u) => URL.revokeObjectURL(u))
+    }
   }, [files, thumbWidth])
 
   return (
@@ -84,11 +90,8 @@ function formatBytes(n: number) {
   return `${new Intl.NumberFormat(undefined, { maximumFractionDigits: 2 }).format(v)} ${units[i]}`
 }
 
-async function renderPdfToDataUrl(url: string, width: number): Promise<string> {
+async function renderPdfBufferToDataUrl(buf: ArrayBuffer, width: number): Promise<string> {
   try {
-    const resp = await fetch(url, { mode: 'cors' })
-    if (!resp.ok) throw new Error('pdf fetch failed')
-    const buf = await resp.arrayBuffer()
     const loadingTask = pdfjs.getDocument({ data: buf })
     const pdf = await loadingTask.promise
     const page = await pdf.getPage(1)
